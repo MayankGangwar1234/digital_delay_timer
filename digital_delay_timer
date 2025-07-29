@@ -1,0 +1,118 @@
+module delay_timer_ls7212  
+(   
+    input [7:0] wb,              // weighting bits  
+    input clk,                   // clock input
+    input reset,                 // timer reset  
+    input trigger,              // trigger input  
+    input mode_a, mode_b,       // mode bits A and B  
+    output reg delay_out_n      // delay output, active low  
+);  
+
+    reg [7:0] PULSE_WIDTH;  
+    reg [7:0] DELAY;  
+    reg [7:0] TIMER;  
+    reg trigger_sync_1, trigger_sync_2;  
+    wire trigger_rising, trigger_falling;  
+    reg timer_start, out_low;  
+    reg [1:0] mode;  
+    reg [1:0] reset_timer_sr;  
+    reg [1:0] reset_det_sr;  
+
+    // Synchronize trigger and reset signals
+    always @(posedge clk) begin
+        trigger_sync_1 <= trigger;  
+        trigger_sync_2 <= trigger_sync_1;  
+
+        reset_timer_sr[0] <= timer_start;
+        reset_timer_sr[1] <= reset_timer_sr[0];
+
+        reset_det_sr[0] <= reset;
+        reset_det_sr[1] <= reset_det_sr[0];
+    end
+
+    assign trigger_rising  =  trigger_sync_1 & ~trigger_sync_2;
+    assign trigger_falling =  trigger_sync_2 & ~trigger_sync_1;
+    wire reset_timer_edge  =  reset_timer_sr[0] & ~reset_timer_sr[1];
+    wire reset_det         =  reset_det_sr[1] & ~reset_det_sr[0];
+
+    // Mode and pulse width sampling on any trigger edge
+    always @(posedge clk) begin
+        if (trigger_rising || trigger_falling) begin
+            PULSE_WIDTH <= wb;
+            DELAY <= (2 * wb + 1) >> 1; // Same as (2*wb+1)/2
+            mode <= {mode_a, mode_b};
+        end
+    end
+
+    // Timer counter logic
+    always @(posedge clk) begin
+        if (reset_timer_edge || trigger_rising || (mode == 2'b11 && (trigger_rising || trigger_falling))) begin
+            TIMER <= 0;
+        end else if (timer_start) begin
+            TIMER <= TIMER + 1;
+        end
+    end
+
+    // Mode operation (main FSM)
+    always @(posedge clk) begin
+        if (reset) begin
+            out_low <= 0;
+            timer_start <= 0;
+        end else begin
+            case (mode)
+                2'b00: begin // One-Shot Mode
+                    if (trigger_rising) begin
+                        out_low <= 1;
+                        timer_start <= 1;
+                    end else if (TIMER >= PULSE_WIDTH) begin
+                        out_low <= 0;
+                        timer_start <= 0;
+                    end
+                end
+
+                2'b01: begin // Delayed Operate Mode
+                    if ((reset_det && trigger) || trigger_rising) begin
+                        timer_start <= 1;
+                    end else if (TIMER >= DELAY) begin
+                        out_low <= 1;
+                        timer_start <= 0;
+                    end else if (trigger_falling || !trigger) begin
+                        out_low <= 0;
+                        timer_start <= 0;
+                    end
+                end
+
+                2'b10: begin // Delayed Release Mode
+                    if (trigger_rising || trigger) begin
+                        out_low <= 1;
+                    end else if (trigger_falling) begin
+                        timer_start <= 1;
+                    end else if (TIMER >= DELAY) begin
+                        out_low <= 0;
+                        timer_start <= 0;
+                    end
+                end
+
+                2'b11: begin // Delayed Dual Mode
+                    if ((reset_det && trigger) || trigger_rising || trigger_falling) begin
+                        timer_start <= 1;
+                    end else if (TIMER >= DELAY) begin
+                        out_low <= trigger;
+                        timer_start <= 0;
+                    end
+                end
+
+                default: begin
+                    out_low <= 0;
+                    timer_start <= 0;
+                end
+            endcase
+        end
+    end
+
+    // Output generation
+    always @(posedge clk) begin
+        delay_out_n <= ~out_low; // active-low output
+    end
+
+endmodule
