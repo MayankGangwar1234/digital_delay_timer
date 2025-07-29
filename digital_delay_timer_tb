@@ -1,0 +1,71 @@
+module tb_ls7212;  
+    // Inputs  
+    reg [7:0] wb;  
+    reg clk;  
+    reg reset;  
+    reg trigger;  
+    reg mode_a;  
+    reg mode_b;  
+
+    // Output  
+    wire delay_out_n;  
+
+    // Instantiate the Unit Under Test (UUT)  
+    delay_timer_ls7212 uut (  
+        .wb(wb),   
+        .clk(clk),   
+        .reset(reset),   
+        .trigger(trigger),   
+        .mode_a(mode_a),   
+        .mode_b(mode_b),   
+        .delay_out_n(delay_out_n)  
+    );  
+
+    // Clock generation  
+    initial begin   
+        clk = 0;  
+        forever #5 clk = ~clk;  // 100 MHz clock
+    end  
+
+    // Stimulus  
+    initial begin  
+        // Initialize Inputs  
+        wb = 8'd10;  
+        mode_a = 0;  
+        mode_b = 0;  
+        reset = 1;  
+        trigger = 0;  
+        #50;  
+
+        // Deassert reset after some time  
+        reset = 0;  
+        #50;
+
+        // Trigger pulse  
+        trigger = 1;  
+        #20;  
+        trigger = 0;  
+        #200;
+
+        // Try different mode combinations
+        mode_a = 1; mode_b = 0; trigger = 1; #20; trigger = 0; #200;
+        mode_a = 0; mode_b = 1; trigger = 1; #20; trigger = 0; #200;
+        mode_a = 1; mode_b = 1; trigger = 1; #20; trigger = 0; #200;
+
+        // Change wb value  
+        wb = 8'd20;
+        #100;
+        trigger = 1; #20; trigger = 0; #200;
+
+        // Assert reset again mid-simulation
+        reset = 1; #20; reset = 0; #20;
+
+        // Final check
+        trigger = 1; #20; trigger = 0;
+
+        // End simulation
+        #500;
+        $display("Simulation done.");
+        $finish;
+    end  
+endmodule  
