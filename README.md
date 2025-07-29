@@ -39,7 +39,7 @@ This project implements a **Verilog model of the LS7212 programmable delay timer
 
 Below is a sample output waveform:
 
-![Waveform]([screenshot.png](https://github.com/MayankGangwar1234/digital_delay_timer/blob/main/Screenshot%202025-07-29%20200713.png))
+![Waveform](https://github.com/MayankGangwar1234/digital_delay_timer/blob/main/Screenshot%202025-07-29%20200713.png)
 
 ## 🛠️ Requirements
 
