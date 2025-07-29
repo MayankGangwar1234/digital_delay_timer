@@ -17,7 +17,7 @@ This project implements a **Verilog model of the LS7212 programmable delay timer
 
 | File Name           | Description                               |
 |---------------------|-------------------------------------------|
-| `delay_timer_ls7212.v` | Main Verilog module for the timer        |
+| `(https://github.com/MayankGangwar1234/digital_delay_timer/blob/main/digital_delay_timer)` | Main Verilog module for the timer        |
 | `tb_ls7212.v`          | Testbench for functional simulation      |
 | `README.md`            | This documentation file                  |
 
